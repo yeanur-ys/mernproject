@@ -1,67 +1,157 @@
 const express = require('express');
+const router = express.Router();
+const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const User = require('../models/User');
-const router = express.Router();
+const { authenticateJWT } = require('../middleware/auth');
 
-// Signup Route
+/**
+ * @route   POST /api/auth/signup
+ * @desc    Register a new user
+ * @access  Public
+ */
 router.post('/signup', async (req, res) => {
-  const { name, email, password, role } = req.body;
-
   try {
-    // Check if user already exists
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      return res.status(400).json({ message: 'User already exists' });
+    const { name, email, password, role } = req.body;
+
+    // Validate input
+    if (!name || !email || !password) {
+      return res.status(400).json({ message: 'Please provide name, email and password' });
     }
 
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
+    if (password.length < 6) {
+      return res.status(400).json({ message: 'Password must be at least 6 characters long' });
+    }
 
-    // Create new user
-    const newUser = new User({
+    // Check if user already exists
+    const existingUser = await User.findOne({ email: email.toLowerCase() });
+    if (existingUser) {
+      return res.status(400).json({ message: 'Email already exists' });
+    }
+
+    // Create new user - using User model's pre-save hook for password hashing
+    const user = new User({
       name,
-      email,
-      password: hashedPassword,
-      role,
+      email: email.toLowerCase(),
+      password, // Will be hashed by the pre-save hook in the User model
+      role: ['admin', 'user'].includes(role) ? role : 'user'
     });
 
-    await newUser.save();
-    const token = jwt.sign(
-      { id: newUser._id, email: newUser.email, role: newUser.role },
-      process.env.JWT_SECRET,
-      { expiresIn: '1h' }
-    );
+    await user.save();
 
-    res.status(201).json({ message: 'User created successfully', token });
-  } catch (error) {
-    console.error('Error in signup:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-// Login Route
-router.post('/login', async (req, res) => {
-  const { email, password } = req.body;
-
-  try {
-    const user = await User.findOne({ email });
-    if (!user) return res.status(400).json({ message: 'Invalid credentials' });
-
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) return res.status(400).json({ message: 'Invalid credentials' });
-
+    // Generate JWT token
     const token = jwt.sign(
       { id: user._id, email: user.email, role: user.role },
       process.env.JWT_SECRET,
-      { expiresIn: '1h' }
+      { expiresIn: '1d' }
     );
 
-    res.json({ message: 'Login successful', token });
-  } catch (error) {
-    console.error('Error in login:', error);
-    res.status(500).json({ message: 'Server error' });
+    // Return success response
+    res.status(201).json({
+      success: true,
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role
+      }
+    });
+  } catch (err) {
+    console.error('Signup error:', err);
+    res.status(500).json({ message: 'Server error during signup', error: err.message });
   }
+});
+
+/**
+ * @route   POST /api/auth/login
+ * @desc    Authenticate user & get token
+ * @access  Public
+ */
+router.post('/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    // Validate input
+    if (!email || !password) {
+      return res.status(400).json({ message: 'Please provide email and password' });
+    }
+
+    // Find user by email
+    console.log('Login attempt for email:', email.toLowerCase());
+    const user = await User.findOne({ email: email.toLowerCase() });
+    if (!user) {
+      console.log('User not found with email:', email.toLowerCase());
+      // Use generic message for security
+      return res.status(401).json({ message: 'Invalid credentials' });
+    }
+
+    // Validate password
+    console.log('User found, comparing passwords');
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    console.log('Password valid:', isPasswordValid);
+    if (!isPasswordValid) {
+      // Use generic message for security
+      return res.status(401).json({ message: 'Invalid credentials' });
+    }
+
+    // Generate JWT token
+    const token = jwt.sign(
+      { id: user._id, email: user.email, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: '1d' }
+    );
+
+    // Return success response
+    res.status(200).json({
+      success: true,
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role
+      }
+    });
+  } catch (err) {
+    console.error('Login error:', err);
+    res.status(500).json({ message: 'Server error during login', error: err.message });
+  }
+});
+
+/**
+ * @route   GET /api/auth/me
+ * @desc    Get current user's profile
+ * @access  Private
+ */
+router.get('/me', authenticateJWT, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select('-password');
+    
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    
+    res.status(200).json({
+      success: true,
+      user
+    });
+  } catch (err) {
+    console.error('Get user profile error:', err);
+    res.status(500).json({ message: 'Error fetching user data', error: err.message });
+  }
+});
+
+/**
+ * @route   POST /api/auth/logout
+ * @desc    Logout user (client-side only)
+ * @access  Public
+ */
+router.post('/logout', (req, res) => {
+  // JWT cannot be invalidated without a token store
+  // This endpoint exists for clarity but the actual logout
+  // happens on client-side by removing the token from localStorage
+  res.status(200).json({ success: true, message: 'Logout successful' });
 });
 
 module.exports = router;

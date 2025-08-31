@@ -1,69 +1,120 @@
 import React, { useState } from 'react';
-import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import axios from '../axios';
+import '../styles/SignupPage.css';
+import Header from '../components/Header';
+import Footer from '../components/Footer';
 
-const Signup = () => {
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    password: '',
-    role: 'member',
-  });
+function Signup() {
+  const [form, setForm] = useState({ name: '', email: '', password: '', role: 'user' });
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleSubmit = async (e) => {
+  const handleChange = e => setForm({ ...form, [e.target.name]: e.target.value });
+
+  const handleSubmit = async e => {
     e.preventDefault();
+    setIsLoading(true);
+    setError('');
+    
     try {
-      const response = await axios.post('http://localhost:5000/api/auth/signup', formData);
-      localStorage.setItem('token', response.data.token);
-      navigate('/catalog'); // Redirect to catalog after signup
-      alert(`Sign up successful as a ${formData.role}`);
+      const res = await axios.post('/auth/signup', form);
+      console.log('Signup successful:', res.data);
+      localStorage.setItem('token', res.data.token);
+      navigate('/');
     } catch (err) {
-      setError('Error during sign-up');
+      setError(err.response?.data?.message || 'Signup failed. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
-    <div className="flex justify-center items-center h-screen bg-gray-100">
-      <form onSubmit={handleSubmit} className="bg-white p-8 rounded-lg shadow-lg w-96">
-        <h2 className="text-2xl font-bold mb-4">Sign Up</h2>
-        <input
-          type="text"
-          value={formData.name}
-          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-          placeholder="Name"
-          className="w-full p-2 mb-4 border border-gray-300 rounded-md"
-        />
-        <input
-          type="email"
-          value={formData.email}
-          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-          placeholder="Email"
-          className="w-full p-2 mb-4 border border-gray-300 rounded-md"
-        />
-        <input
-          type="password"
-          value={formData.password}
-          onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-          placeholder="Password"
-          className="w-full p-2 mb-4 border border-gray-300 rounded-md"
-        />
-        <select
-          value={formData.role}
-          onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-          className="w-full p-2 mb-4 border border-gray-300 rounded-md"
-        >
-          <option value="member">Member</option>
-          <option value="admin">Admin</option>
-        </select>
-        <button type="submit" className="w-full p-2 bg-green-500 text-white rounded-md">
-          Sign Up
-        </button>
-        {error && <p className="text-red-500 mt-4">{error}</p>}
-      </form>
+    <div className="flex flex-col min-h-screen">
+      <Header />
+      <div className="signup-page flex-grow">
+        <div className="signup-container">
+          <div className="signup-header">
+            <h2 className="signup-title">Create Account</h2>
+            <p className="signup-subtitle">Join our library community</p>
+          </div>
+          
+          <form onSubmit={handleSubmit} className="signup-form">
+            <div className="form-group">
+              <label htmlFor="name" className="form-label">Full Name</label>
+              <input
+                id="name"
+                name="name"
+                placeholder="Enter your name"
+                value={form.name}
+                onChange={handleChange}
+                required
+                className="form-input"
+              />
+            </div>
+            
+            <div className="form-group">
+              <label htmlFor="email" className="form-label">Email Address</label>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                placeholder="Enter your email"
+                value={form.email}
+                onChange={handleChange}
+                required
+                className="form-input"
+              />
+            </div>
+            
+            <div className="form-group">
+              <label htmlFor="password" className="form-label">Password</label>
+              <input
+                id="password"
+                name="password"
+                type="password"
+                placeholder="Create a password"
+                value={form.password}
+                onChange={handleChange}
+                required
+                className="form-input"
+              />
+            </div>
+            
+            <div className="form-group">
+              <label htmlFor="role" className="form-label">Account Type</label>
+              <select
+                id="role"
+                name="role"
+                value={form.role}
+                onChange={handleChange}
+                className="form-select"
+              >
+                <option value="user">Regular User</option>
+                <option value="admin">Administrator</option>
+              </select>
+            </div>
+            
+            <button 
+              type="submit" 
+              className="signup-button"
+              disabled={isLoading}
+            >
+              {isLoading ? 'Creating Account...' : 'Create Account'}
+            </button>
+            
+            {error && <p className="error-message">{error}</p>}
+            
+            <p className="login-link">
+              Already have an account? <Link to="/login">Log in</Link>
+            </p>
+          </form>
+        </div>
+      </div>
+      <Footer />
     </div>
   );
-};
+}
 
 export default Signup;

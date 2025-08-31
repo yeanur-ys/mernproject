@@ -1,18 +1,179 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import Header from '../components/Header';
+import Footer from '../components/Footer';
+import MyBorrows from '../components/MyBorrows';
+import axios from '../axios';
+import '../styles/HomePage.css';
+import { jwtDecode } from 'jwt-decode';
 
 const Home = () => {
+  const [user, setUser] = useState(null);
+  const [featuredBooks, setFeaturedBooks] = useState([]);
+  const [loading, setLoading] = useState(true);
+  
+  useEffect(() => {
+    // Check for user token and decode
+    const token = localStorage.getItem('token');
+    if (token) {
+      try {
+        console.log('Decoding token in Home.js:', token);
+        const decoded = jwtDecode(token);
+        console.log('Decoded token in Home.js:', decoded);
+        setUser(decoded);
+      } catch (error) {
+        console.error('Invalid token in Home.js:', error);
+        localStorage.removeItem('token');
+      }
+    }
+    
+    // Fetch featured books
+    const fetchFeaturedBooks = async () => {
+      try {
+        const response = await axios.get('/books?limit=4');
+        setFeaturedBooks(response.data.slice(0, 4)); // Only take up to 4 books
+      } catch (error) {
+        console.error('Error fetching books', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchFeaturedBooks();
+  }, []);
+  
   return (
-    <div className="flex justify-center items-center h-screen flex-col text-center bg-gray-100">
-      <h1 className="text-4xl font-bold mb-6">Welcome to the Library</h1>
-      <div className="space-x-4">
-        <Link to="/login">
-          <button className="px-6 py-3 bg-blue-500 text-white rounded-md">Login</button>
-        </Link>
-        <Link to="/signup">
-          <button className="px-6 py-3 bg-green-500 text-white rounded-md">Sign Up</button>
-        </Link>
-      </div>
+    <div className="home-page">
+      <Header user={user} />
+      
+      <main className="home-container">
+        {/* Hero section */}
+        <section className="hero-section">
+          <h1 className="hero-title">Welcome to the Library</h1>
+          <p className="hero-subtitle">
+            Discover thousands of books and resources at your fingertips. 
+            Browse our catalog, borrow books, and enjoy reading.
+          </p>
+          <Link to="/catalog" className="hero-button">
+            Browse Catalog
+          </Link>
+        </section>
+        
+        {/* My Borrows Section (for logged in users) */}
+        {user && (
+          <section className="my-borrows-section">
+            <MyBorrows />
+          </section>
+        )}
+        
+        {/* Features section */}
+        <section className="features-section">
+          <h2 className="section-title">What We Offer</h2>
+          
+          <div className="features-grid">
+            <div className="feature-card">
+              <div className="feature-icon">📚</div>
+              <h3 className="feature-title">Extensive Collection</h3>
+              <p>Access thousands of books across multiple genres, from classics to contemporary bestsellers.</p>
+            </div>
+            
+            <div className="feature-card">
+              <div className="feature-icon">🔍</div>
+              <h3 className="feature-title">Easy Search</h3>
+              <p>Find exactly what you're looking for with our powerful search and filter system.</p>
+            </div>
+            
+            <div className="feature-card">
+              <div className="feature-icon">📱</div>
+              <h3 className="feature-title">Digital Access</h3>
+              <p>Access your account, check due dates, and manage your borrowed books from anywhere.</p>
+            </div>
+          </div>
+        </section>
+        
+        {/* Popular books section */}
+        <section className="popular-books">
+          <h2 className="section-title">Popular Books</h2>
+          
+          <div className="books-grid">
+            {loading ? (
+              <p style={{ textAlign: 'center', gridColumn: '1 / -1' }}>Loading books...</p>
+            ) : featuredBooks.length > 0 ? (
+              featuredBooks.map((book) => (
+                <div className="book-card" key={book._id}>
+                  <img 
+                    src={book.imageUrl || 'https://via.placeholder.com/300x400?text=Book+Cover'} 
+                    alt={book.title}
+                    className="book-image"
+                  />
+                  <div className="book-info">
+                    <h3 className="book-title">{book.title}</h3>
+                    <p className="book-author">by {book.author}</p>
+                    <Link to={`/book/${book._id}`} className="book-button">
+                      View Details
+                    </Link>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <>
+                {/* Placeholder books if none are available from the API */}
+                <div className="book-card">
+                  <img src="https://via.placeholder.com/300x400?text=Book+Cover" alt="Placeholder" className="book-image" />
+                  <div className="book-info">
+                    <h3 className="book-title">The Great Gatsby</h3>
+                    <p className="book-author">by F. Scott Fitzgerald</p>
+                    <Link to="/catalog" className="book-button">View Details</Link>
+                  </div>
+                </div>
+                
+                <div className="book-card">
+                  <img src="https://via.placeholder.com/300x400?text=Book+Cover" alt="Placeholder" className="book-image" />
+                  <div className="book-info">
+                    <h3 className="book-title">To Kill a Mockingbird</h3>
+                    <p className="book-author">by Harper Lee</p>
+                    <Link to="/catalog" className="book-button">View Details</Link>
+                  </div>
+                </div>
+                
+                <div className="book-card">
+                  <img src="https://via.placeholder.com/300x400?text=Book+Cover" alt="Placeholder" className="book-image" />
+                  <div className="book-info">
+                    <h3 className="book-title">1984</h3>
+                    <p className="book-author">by George Orwell</p>
+                    <Link to="/catalog" className="book-button">View Details</Link>
+                  </div>
+                </div>
+                
+                <div className="book-card">
+                  <img src="https://via.placeholder.com/300x400?text=Book+Cover" alt="Placeholder" className="book-image" />
+                  <div className="book-info">
+                    <h3 className="book-title">Pride and Prejudice</h3>
+                    <p className="book-author">by Jane Austen</p>
+                    <Link to="/catalog" className="book-button">View Details</Link>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        </section>
+        
+        {/* Call to action section */}
+        <section className="cta-section">
+          <h2 className="cta-title">Ready to Get Started?</h2>
+          <p className="cta-text">
+            Join our library today and get access to thousands of books. 
+            Sign up now or browse our catalog to see what's available.
+          </p>
+          {user ? (
+            <Link to="/catalog" className="hero-button">Browse Books</Link>
+          ) : (
+            <Link to="/signup" className="hero-button">Sign Up Now</Link>
+          )}
+        </section>
+      </main>
+      
+      <Footer />
     </div>
   );
 };

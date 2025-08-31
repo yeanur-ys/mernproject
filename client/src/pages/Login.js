@@ -1,47 +1,94 @@
-import React, { useState } from 'react';
-import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import axios from '../axios';
+import '../styles/LoginPage.css';
 
 const Login = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [credentials, setCredentials] = useState({ email: '', password: '' });
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
+  // Check if user is already logged in
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      navigate('/');
+    }
+  }, [navigate]);
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setCredentials(prev => ({ ...prev, [name]: value }));
+    if (error) setError('');
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Simple validation
+    if (!credentials.email || !credentials.password) {
+      setError('Please provide both email and password');
+      return;
+    }
+    
+    setLoading(true);
+    
     try {
-      const response = await axios.post('http://localhost:5000/api/auth/login', { email, password });
+      console.log('Attempting login with:', credentials.email);
+      const response = await axios.post('/auth/login', credentials);
+      console.log('Login successful:', response.data);
       localStorage.setItem('token', response.data.token);
-      navigate('/catalog'); // Redirect to catalog after login
-      alert('Login successful! Welcome to the Dashboard.');
-    } catch (error) {
-      setError('Invalid email or password');
+      navigate('/');  // Always navigate to home page after login
+    } catch (err) {
+      console.error('Login error:', err);
+      setError(err.response?.data?.message || 'Login failed. Please check your credentials.');
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="flex justify-center items-center h-screen bg-gray-100">
-      <form onSubmit={handleSubmit} className="bg-white p-8 rounded-lg shadow-lg w-96">
-        <h2 className="text-2xl font-bold mb-4">Login</h2>
+    <div className="login-container">
+      <form onSubmit={handleSubmit}>
+        <h2>Sign in to your account</h2>
+        
+        {error && <div className="error-message">{error}</div>}
+        
         <input
           type="email"
-          className="w-full p-2 mb-4 border border-gray-300 rounded-md"
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          name="email"
+          placeholder="Email Address"
+          value={credentials.email}
+          onChange={handleChange}
+          required
         />
+        
         <input
           type="password"
-          className="w-full p-2 mb-4 border border-gray-300 rounded-md"
+          name="password"
           placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
+          value={credentials.password}
+          onChange={handleChange}
+          required
         />
-        <button type="submit" className="w-full p-2 bg-blue-500 text-white rounded-md">
-          Login
+        
+        <button type="submit" disabled={loading}>
+          {loading ? 'Signing in...' : 'Sign in'}
         </button>
-        {error && <p className="text-red-500 mt-4">{error}</p>}
+        
+        <a href="#" className="forgot-password-link">Forgot password?</a>
+        
+        <div style={{ marginTop: '20px', textAlign: 'center' }}>
+          Don't have an account?{' '}
+          <Link to="/signup" style={{ color: '#007BFF' }}>
+            Sign up
+          </Link>
+          <br />
+          <Link to="/" style={{ color: '#666', fontSize: '14px', marginTop: '10px', display: 'inline-block' }}>
+            ← Back to home
+          </Link>
+        </div>
       </form>
     </div>
   );

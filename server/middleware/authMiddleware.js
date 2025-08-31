@@ -7,13 +7,15 @@ const authenticateJWT = (req, res, next) => {
     return res.status(403).json({ message: 'Access denied' });
   }
 
-  jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
-    if (err) {
-      return res.status(403).json({ message: 'Invalid token' });
-    }
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    console.log('Token decoded:', decoded);
     req.user = decoded;
     next();
-  });
+  } catch (err) {
+    console.error('JWT verification error:', err);
+    return res.status(403).json({ message: 'Invalid token' });
+  }
 };
 
 module.exports = authenticateJWT;
