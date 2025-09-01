@@ -3,6 +3,7 @@ require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const path = require('path');
 const bookRoutes = require('./routes/bookRoutes');
 const authRoutes = require('./routes/authRoutes');
 const borrowRoutes = require('./routes/borrowRoutes');
@@ -17,11 +18,16 @@ console.log('MONGO_URI:', process.env.MONGO_URI);
 
 // Configure middleware
 app.use(cors({
-  origin: 'http://localhost:3000',  // Frontend origin
+  origin: ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:5000'],  // Frontend origins
   credentials: true
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Serve test HTML file
+app.get('/test', (req, res) => {
+  res.sendFile(path.join(__dirname, '../client/authTest.html'));
+});
 
 // Debug configuration for development
 mongoose.set('debug', process.env.NODE_ENV !== 'production');
@@ -51,6 +57,36 @@ app.get('/', (req, res) => {
       borrows: '/api/borrows'
     }
   });
+});
+
+// Test authentication route
+app.get('/api/auth/test', (req, res) => {
+  const authHeader = req.headers.authorization;
+  console.log('Auth Test - Authorization header:', authHeader);
+  
+  if (!authHeader) {
+    return res.status(401).json({ message: 'No authorization header provided' });
+  }
+  
+  try {
+    const token = authHeader.split(' ')[1];
+    console.log('Auth Test - Token extracted:', token ? token.substring(0, 15) + '...' : 'none');
+    
+    if (!token) {
+      return res.status(401).json({ message: 'No token provided in authorization header' });
+    }
+    
+    const decoded = require('jsonwebtoken').verify(token, process.env.JWT_SECRET);
+    console.log('Auth Test - Token decoded successfully:', decoded);
+    
+    return res.status(200).json({ 
+      message: 'Authentication successful',
+      user: decoded
+    });
+  } catch (error) {
+    console.error('Auth Test - JWT verification error:', error);
+    return res.status(401).json({ message: 'Invalid token: ' + error.message });
+  }
 });
 
 // Global error handler

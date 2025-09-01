@@ -1,50 +1,34 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
-import MyBorrows from '../components/MyBorrows';
+import LoadingPage from '../components/LoadingPage';
+// MyBorrows removed from Home; users should go to /dashboard to view borrows
 import axios from '../axios';
 import '../styles/HomePage.css';
-import { jwtDecode } from 'jwt-decode';
 
-const Home = () => {
-  const [user, setUser] = useState(null);
+const Home = ({ user, setUser }) => {
   const [featuredBooks, setFeaturedBooks] = useState([]);
   const [loading, setLoading] = useState(true);
-  
+
   useEffect(() => {
-    // Check for user token and decode
-    const token = localStorage.getItem('token');
-    if (token) {
-      try {
-        console.log('Decoding token in Home.js:', token);
-        const decoded = jwtDecode(token);
-        console.log('Decoded token in Home.js:', decoded);
-        setUser(decoded);
-      } catch (error) {
-        console.error('Invalid token in Home.js:', error);
-        localStorage.removeItem('token');
-      }
-    }
-    
-    // Fetch featured books
     const fetchFeaturedBooks = async () => {
       try {
         const response = await axios.get('/books?limit=4');
-        setFeaturedBooks(response.data.slice(0, 4)); // Only take up to 4 books
+        setFeaturedBooks(response.data.slice(0, 4));
       } catch (error) {
         console.error('Error fetching books', error);
       } finally {
         setLoading(false);
       }
     };
-    
     fetchFeaturedBooks();
   }, []);
+  if (loading) return <LoadingPage message="Loading home" />;
   
   return (
     <div className="home-page">
-      <Header user={user} />
+  <Header user={user} setUser={setUser} />
       
       <main className="home-container">
         {/* Hero section */}
@@ -54,17 +38,14 @@ const Home = () => {
             Discover thousands of books and resources at your fingertips. 
             Browse our catalog, borrow books, and enjoy reading.
           </p>
-          <Link to="/catalog" className="hero-button">
-            Browse Catalog
-          </Link>
+          {user ? (
+            <Link to="/catalog" className="hero-button">Browse Catalog</Link>
+          ) : (
+            <Link to="/signup" className="hero-button">Sign Up to Browse</Link>
+          )}
         </section>
         
-        {/* My Borrows Section (for logged in users) */}
-        {user && (
-          <section className="my-borrows-section">
-            <MyBorrows />
-          </section>
-        )}
+  {/* MyBorrows removed from home — dedicated dashboard available at /dashboard */}
         
         {/* Features section */}
         <section className="features-section">
@@ -96,9 +77,7 @@ const Home = () => {
           <h2 className="section-title">Popular Books</h2>
           
           <div className="books-grid">
-            {loading ? (
-              <p style={{ textAlign: 'center', gridColumn: '1 / -1' }}>Loading books...</p>
-            ) : featuredBooks.length > 0 ? (
+            {featuredBooks.length > 0 ? (
               featuredBooks.map((book) => (
                 <div className="book-card" key={book._id}>
                   <img 
@@ -109,7 +88,7 @@ const Home = () => {
                   <div className="book-info">
                     <h3 className="book-title">{book.title}</h3>
                     <p className="book-author">by {book.author}</p>
-                    <Link to={`/book/${book._id}`} className="book-button">
+                    <Link to={`/books/${book._id}`} className="book-button">
                       View Details
                     </Link>
                   </div>

@@ -1,10 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const Book = require('../models/Book');
-const { authenticateJWT } = require('../middleware/auth');
+const authenticateJWT = require('../middleware/auth');
 
-// Get all books
-router.get('/', authenticateJWT, async (req, res) => {
+// Get all books (public access)
+router.get('/', async (req, res) => {
   try {
     console.log('Getting all books');
     const books = await Book.find();
@@ -15,8 +15,8 @@ router.get('/', authenticateJWT, async (req, res) => {
   }
 });
 
-// Get a specific book by ID
-router.get('/:id', authenticateJWT, async (req, res) => {
+// Get a specific book by ID (public access)
+router.get('/:id', async (req, res) => {
   try {
     console.log(`Getting book with ID: ${req.params.id}`);
     const book = await Book.findById(req.params.id);

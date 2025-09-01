@@ -1,16 +1,17 @@
 /* BookCatalog.css */
 .book-catalog {
-  background-color: #f9f4ff;
+  background-color: #fff0f6;
   min-height: calc(100vh - 70px);
+  color: #2b0b1a;
 }
 
 .catalog-header {
   text-align: center;
-  padding: 2rem 0;
-  background: linear-gradient(135deg, #9C27B0, #673AB7);
-  color: white;
-  margin-bottom: 2rem;
-  border-radius: 0 0 20px 20px;
+  padding: 1.5rem 0;
+  background: linear-gradient(90deg, #7b2550, #5a1830);
+  color: #fff0f6;
+  margin-bottom: 1.5rem;
+  border-radius: 0 0 16px 16px;
 }
 
 .catalog-title {
@@ -34,11 +35,11 @@
 }
 
 .book-item {
-  background-color: white;
+  background-color: #fff7fb;
   border-radius: 10px;
   overflow: hidden;
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
-  transition: transform 0.3s, box-shadow 0.3s;
+  box-shadow: 0 8px 18px rgba(58,7,18,0.06);
+  transition: transform 0.25s, box-shadow 0.25s;
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -75,35 +76,34 @@
 }
 
 .book-title {
-  font-size: 1.25rem;
+  font-size: 1.15rem;
   font-weight: 600;
-  color: #4a148c;
+  color: #3a0712;
   margin-bottom: 0.5rem;
   line-height: 1.4;
 }
 
 .book-author {
-  color: #6a1b9a;
+  color: #6b2533;
   margin-bottom: 1rem;
   font-style: italic;
 }
 
 .view-details-button {
   display: inline-block;
-  background: linear-gradient(to right, #9C27B0, #673AB7);
-  color: white;
-  padding: 0.75rem 1.25rem;
-  border-radius: 25px;
+  background: linear-gradient(90deg, #4b0b1a, #3a0712);
+  color: #fff0f6;
+  padding: 0.6rem 1rem;
+  border-radius: 18px;
   text-decoration: none;
   font-weight: 500;
-  transition: all 0.3s;
+  transition: all 0.25s;
   text-align: center;
   margin-top: auto;
 }
 
 .view-details-button:hover {
-  background: linear-gradient(to right, #8E24AA, #5E35B1);
-  box-shadow: 0 5px 15px rgba(106, 27, 154, 0.4);
+  box-shadow: 0 6px 16px rgba(58,7,18,0.12);
 }
 
 .book-status {

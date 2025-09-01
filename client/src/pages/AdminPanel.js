@@ -3,11 +3,10 @@ import axios from '../axios';
 import { useParams, useNavigate } from 'react-router-dom';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
-import { jwtDecode } from 'jwt-decode';
 import BorrowedBooks from '../components/BorrowedBooks';
 import AddBook from '../components/AddBook';
 
-const AdminPanel = () => {
+const AdminPanel = ({ user: propUser }) => {
   const [formData, setFormData] = useState({
     title: '',
     author: '',
@@ -16,30 +15,23 @@ const AdminPanel = () => {
   });
   const [isEdit, setIsEdit] = useState(false);
   const [error, setError] = useState('');
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(propUser || null);
   const [activeTab, setActiveTab] = useState('addBook'); // 'addBook', 'editBook', or 'borrowed'
   const navigate = useNavigate();
   const { id } = useParams();
 
   useEffect(() => {
-    // Check for user token and decode
-    const token = localStorage.getItem('token');
-    if (token) {
-      try {
-        console.log('Decoding token in AdminPanel.js:', token);
-        const decoded = jwtDecode(token);
-        console.log('Decoded token in AdminPanel.js:', decoded);
-        setUser(decoded);
-        if (decoded.role !== 'admin') {
-          navigate('/');
-        }
-      } catch (error) {
-        console.error('Invalid token in AdminPanel.js:', error);
-        localStorage.removeItem('token');
-        navigate('/login');
-      }
-    } else {
+    // Update local user when prop changes
+    setUser(propUser || null);
+
+    // Redirect if not admin
+    if (!propUser) {
       navigate('/login');
+      return;
+    }
+    if (propUser.role !== 'admin') {
+      navigate('/');
+      return;
     }
     
     if (id) {
@@ -58,6 +50,11 @@ const AdminPanel = () => {
         .catch(error => console.log(error));
     }
   }, [id, navigate]);
+
+  useEffect(() => {
+    // When switched to borrowed tab, ensure BorrowedBooks fetches current data by re-mounting
+    // Force a small state ripple by toggling activeTab briefly if needed (no-op here)
+  }, [activeTab]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();

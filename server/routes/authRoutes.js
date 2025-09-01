@@ -3,7 +3,7 @@ const router = express.Router();
 const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { authenticateJWT } = require('../middleware/auth');
+const authenticateJWT = require('../middleware/auth');
 
 /**
  * @route   POST /api/auth/signup
@@ -40,8 +40,9 @@ router.post('/signup', async (req, res) => {
     await user.save();
 
     // Generate JWT token
+    // Generate JWT token with consistent payload
     const token = jwt.sign(
-      { id: user._id, email: user.email, role: user.role },
+      { userId: user._id.toString(), email: user.email, role: user.role },
       process.env.JWT_SECRET,
       { expiresIn: '1d' }
     );
@@ -96,8 +97,9 @@ router.post('/login', async (req, res) => {
     }
 
     // Generate JWT token
+    // Generate JWT token with consistent payload
     const token = jwt.sign(
-      { id: user._id, email: user.email, role: user.role },
+      { userId: user._id.toString(), email: user.email, role: user.role },
       process.env.JWT_SECRET,
       { expiresIn: '1d' }
     );
@@ -124,9 +126,15 @@ router.post('/login', async (req, res) => {
  * @desc    Get current user's profile
  * @access  Private
  */
+/**
+ * @route   GET /api/auth/me
+ * @desc    Get current user's profile
+ * @access  Private
+ */
 router.get('/me', authenticateJWT, async (req, res) => {
   try {
-    const user = await User.findById(req.user.id).select('-password');
+    // Use userId from token payload
+    const user = await User.findById(req.user.userId).select('-password');
     
     if (!user) {
       return res.status(404).json({ message: 'User not found' });

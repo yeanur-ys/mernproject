@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from '../axios';
+import { decodeToken } from '../utils/jwt';
 import '../styles/SignupPage.css';
-import Header from '../components/Header';
-import Footer from '../components/Footer';
+// Signup is a standalone page when user is not authenticated
+import LoadingPage from '../components/LoadingPage';
 
-function Signup() {
+function Signup({ setUser }) {
   const [form, setForm] = useState({ name: '', email: '', password: '', role: 'user' });
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -21,8 +22,13 @@ function Signup() {
     try {
       const res = await axios.post('/auth/signup', form);
       console.log('Signup successful:', res.data);
-      localStorage.setItem('token', res.data.token);
-      navigate('/');
+      const { token } = res.data;
+      if (token) {
+        localStorage.setItem('token', token);
+        const decoded = decodeToken(token);
+        if (decoded && setUser) setUser(decoded);
+      }
+      navigate('/', { replace: true });
     } catch (err) {
       setError(err.response?.data?.message || 'Signup failed. Please try again.');
     } finally {
@@ -30,11 +36,12 @@ function Signup() {
     }
   };
 
+  if (isLoading) return <LoadingPage message="Creating account" />;
+
   return (
-    <div className="flex flex-col min-h-screen">
-      <Header />
-      <div className="signup-page flex-grow">
-        <div className="signup-container">
+    <div className="signup-page">
+      <div className="signup-container">
+        <div className="signup-inner">
           <div className="signup-header">
             <h2 className="signup-title">Create Account</h2>
             <p className="signup-subtitle">Join our library community</p>
@@ -101,7 +108,7 @@ function Signup() {
               className="signup-button"
               disabled={isLoading}
             >
-              {isLoading ? 'Creating Account...' : 'Create Account'}
+              Create Account
             </button>
             
             {error && <p className="error-message">{error}</p>}
@@ -112,7 +119,6 @@ function Signup() {
           </form>
         </div>
       </div>
-      <Footer />
     </div>
   );
 }

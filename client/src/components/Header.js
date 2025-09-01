@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import '../styles/Header.css';
+import LogoutButton from './LogoutButton';
 
-const Header = ({ user }) => {
+const Header = ({ user, setUser }) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const navigate = useNavigate();
@@ -31,7 +32,8 @@ const Header = ({ user }) => {
 
   const handleLogout = () => {
     localStorage.removeItem('token');
-    navigate('/login');
+  if (setUser) setUser(null);
+  navigate('/login');
   };
 
   return (
@@ -39,7 +41,7 @@ const Header = ({ user }) => {
       <div className="header-container">
         <div className="logo">
           <Link to="/">
-            <span className="logo-text">BookHaven</span>
+            <span className="logo-text">Library Management</span>
             <span className="logo-icon">📚</span>
           </Link>
         </div>
@@ -58,6 +60,11 @@ const Header = ({ user }) => {
             <li className={location.pathname === '/catalog' ? 'active' : ''}>
               <Link to="/catalog" onClick={() => setMenuOpen(false)}>Book Catalog</Link>
             </li>
+            {user && (
+              <li className={location.pathname === '/dashboard' ? 'active' : ''}>
+                <Link to="/dashboard" onClick={() => setMenuOpen(false)}>Dashboard</Link>
+              </li>
+            )}
             {user?.role === 'admin' && (
               <li className={location.pathname.startsWith('/admin') ? 'active' : ''}>
                 <Link to="/admin" onClick={() => setMenuOpen(false)}>
@@ -69,9 +76,7 @@ const Header = ({ user }) => {
               {user ? (
                 <div className="user-info">
                   <span className="welcome-text">Hi, {user.name || user.email.split('@')[0]}</span>
-                  <button className="logout-btn" onClick={handleLogout}>
-                    Logout
-                  </button>
+                  <LogoutButton setUser={setUser} className="logout-btn" />
                 </div>
               ) : (
                 <div className="auth-buttons">

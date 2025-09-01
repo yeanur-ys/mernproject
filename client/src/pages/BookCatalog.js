@@ -3,36 +3,21 @@ import { Link } from 'react-router-dom';
 import axios from '../axios';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
-import { jwtDecode } from 'jwt-decode';
+import LoadingPage from '../components/LoadingPage';
 import '../styles/BookCatalog.css';
 
-const BookCatalog = () => {
+const BookCatalog = ({ user: propUser, setUser }) => {
   const [books, setBooks] = useState([]);
-  const [user, setUser] = useState(null);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const user = propUser || null;
+  const [isAdmin, setIsAdmin] = useState(user?.role === 'admin');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
     const fetchBooks = async () => {
       try {
-        // Check for authentication
-        const token = localStorage.getItem('token');
-        if (token) {
-          try {
-            console.log('Decoding token in BookCatalog.js:', token);
-            const decoded = jwtDecode(token);
-            console.log('Decoded token in BookCatalog.js:', decoded);
-            setUser(decoded);
-            setIsAdmin(decoded.role === 'admin');
-          } catch (error) {
-            console.error('Invalid token in BookCatalog.js:', error);
-            localStorage.removeItem('token');
-          }
-        }
-        
-        console.log('Starting to fetch books...');
-        const response = await axios.get('/books');
+  console.log('Starting to fetch books...');
+  const response = await axios.get('/books');
         console.log('Books API response:', response.data);
         setBooks(response.data);
       } catch (err) {
@@ -47,12 +32,12 @@ const BookCatalog = () => {
     fetchBooks();
   }, []);
 
-  if (loading) return <div className="p-8 text-center">Loading books...</div>;
+  if (loading) return <LoadingPage message="Loading catalog" />;
   if (error) return <div className="p-8 text-center text-red-500">{error}</div>;
 
   return (
     <div className="flex flex-col min-h-screen book-catalog">
-      <Header user={user} />
+  <Header user={user} setUser={setUser} />
       
       <div className="catalog-header">
         <h1 className="catalog-title">Book Catalog</h1>
@@ -60,11 +45,7 @@ const BookCatalog = () => {
       </div>
       
       <div className="flex-grow">
-        {loading ? (
-          <div className="loading-container">
-            <div className="loading-spinner"></div>
-          </div>
-        ) : books.length === 0 ? (
+        {books.length === 0 ? (
           <div className="empty-state">
             <div className="empty-icon">📚</div>
             <h3 className="empty-title">No books available</h3>
@@ -93,7 +74,7 @@ const BookCatalog = () => {
                     )}
                   </div>
                   <Link 
-                    to={`/book/${book._id}`} 
+                    to={`/books/${book._id}`} 
                     className="view-details-button"
                   >
                     View Details

@@ -1,5 +1,4 @@
 import axios from 'axios';
-import { decodeToken } from './utils/jwt';
 
 /**
  * Custom axios instance configured for API communication
@@ -22,32 +21,14 @@ instance.interceptors.request.use(
     const token = localStorage.getItem('token');
     
     // If token exists, add to Authorization header
-      if (token) {
-        try {
-          // Verify token format before using it
-          const decoded = decodeToken(token);
-
-          // If decode failed, just skip attaching Authorization (let server validate)
-          if (!decoded) {
-            console.warn('Token decode returned null - not attaching Authorization header');
-          } else {
-            // Check expiration safely
-            const currentTime = Date.now() / 1000;
-            if (decoded.exp && decoded.exp < currentTime) {
-              console.warn('Token expired, removing from localStorage');
-              localStorage.removeItem('token');
-              // Don't add the expired token to headers
-            } else {
-              // Token is valid, add to headers
-              config.headers['Authorization'] = `Bearer ${token}`;
-              console.log('Auth header set with valid token');
-            }
-          }
-        } catch (error) {
-          console.error('Invalid token format (exception), removing from localStorage:', error);
-          localStorage.removeItem('token');
-        }
-      } else {
+    if (token) {
+      config.headers['Authorization'] = `Bearer ${token}`;
+      
+      // Log auth header in development
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`Auth header set: Bearer ${token.substring(0, 15)}...`);
+      }
+    } else {
       if (process.env.NODE_ENV === 'development') {
         console.log('No auth token available for request');
       }
@@ -92,15 +73,13 @@ instance.interceptors.response.use(
         errorMsg.includes('expired') ||
         errorMsg.includes('Access denied');
       
-      // Don't redirect or clear token if this is a login request
-      const isLoginRequest = error.config.url.includes('/auth/login');
-      
-      if (isTokenIssue && !isLoginRequest) {
+      if (isTokenIssue) {
         console.warn('Clearing token due to authentication issue');
         localStorage.removeItem('token');
         
-        // Redirect to login only if we're not already there
-        if (window.location.pathname !== '/login') {
+        // Redirect to login only if we're not already there and not trying to login
+        const isLoginRequest = error.config.url.includes('/auth/login');
+        if (window.location.pathname !== '/login' && !isLoginRequest) {
           console.log('Redirecting to login page...');
           window.location.href = '/login';
         }

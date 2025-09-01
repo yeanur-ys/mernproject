@@ -3,12 +3,11 @@ import { useParams, Link } from 'react-router-dom';
 import axios from '../axios';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
-import { jwtDecode } from 'jwt-decode';
+import LoadingPage from '../components/LoadingPage';
 
-const BookDetails = () => {
+const BookDetails = ({ user, setUser }) => {
   const { id } = useParams();
   const [book, setBook] = useState(null);
-  const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [borrowing, setBorrowing] = useState(false);
@@ -18,21 +17,7 @@ const BookDetails = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Check for authentication
-        const token = localStorage.getItem('token');
-        if (token) {
-          try {
-            console.log('Decoding token in BookDetails.js:', token);
-            const decoded = jwtDecode(token);
-            console.log('Decoded token in BookDetails.js:', decoded);
-            setUser(decoded);
-          } catch (error) {
-            console.error('Invalid token in BookDetails.js:', error);
-            localStorage.removeItem('token');
-          }
-        }
-        
-        const response = await axios.get(`/books/${id}`);
+  const response = await axios.get(`/books/${id}`);
         setBook(response.data);
       } catch (err) {
         setError(err.response?.data?.message || err.message || 'Failed to load book');
@@ -44,13 +29,13 @@ const BookDetails = () => {
     fetchData();
   }, [id]);
 
-  if (loading) return <div className="p-8 text-center">Loading book...</div>;
+  if (loading) return <LoadingPage message="Loading book" />;
   if (error) return <div className="p-8 text-center text-red-500">{error}</div>;
   if (!book) return <div className="p-8 text-center">Book not found</div>;
 
   return (
     <div className="flex flex-col min-h-screen">
-      <Header user={user} />
+  <Header user={user} setUser={setUser} />
       <div className="flex-grow p-8 max-w-4xl mx-auto w-full">
         <Link to="/catalog" className="text-blue-500 hover:text-blue-700 flex items-center mb-4">
           <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
@@ -80,8 +65,8 @@ const BookDetails = () => {
                 )}
               </div>
               
-              {/* Borrow button */}
-              {user && book.isAvailable && (
+              {/* Borrow button (hidden for admins) */}
+              {user && book.isAvailable && user.role !== 'admin' && (
                 <div className="mt-4">
                   <button
                     onClick={async () => {
@@ -135,6 +120,12 @@ const BookDetails = () => {
               {!user && (
                 <div className="mt-4 p-2 bg-blue-100 text-blue-800 rounded">
                   <Link to="/login" className="font-medium underline">Log in</Link> to borrow this book.
+                </div>
+              )}
+
+              {user && user.role === 'admin' && (
+                <div className="mt-4 p-2 bg-yellow-100 text-yellow-800 rounded">
+                  Admins cannot borrow books here. Use the Admin Dashboard to manage borrows.
                 </div>
               )}
             </div>

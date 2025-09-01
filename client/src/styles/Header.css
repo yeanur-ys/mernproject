@@ -1,7 +1,7 @@
 /* Header.css */
 .header {
-  background-color: #6A1B9A;
-  color: white;
+  background-color: transparent;
+  color: #2b0b1a;
   position: sticky;
   top: 0;
   z-index: 1000;
@@ -10,9 +10,8 @@
 }
 
 .header.scrolled {
-  background-color: rgba(106, 27, 154, 0.95);
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
-  backdrop-filter: blur(8px);
+  background-color: rgba(255, 183, 213, 0.95);
+  box-shadow: 0 4px 10px rgba(27, 11, 17, 0.08);
 }
 
 .header-container {
@@ -30,17 +29,14 @@
   align-items: center;
   font-size: 1.6rem;
   font-weight: 700;
-  color: white;
+  color: #2b0b1a;
   text-decoration: none;
   letter-spacing: 0.5px;
 }
 
 .logo-text {
   margin-right: 8px;
-  background: linear-gradient(90deg, #fff, #e0e0e0);
-  background-clip: text;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: #2b0b1a;
 }
 
 .logo-icon {
@@ -72,7 +68,7 @@
 }
 
 .nav-menu a {
-  color: white;
+  color: #2b0b1a;
   text-decoration: none;
   font-size: 1rem;
   font-weight: 500;
@@ -81,7 +77,7 @@
 }
 
 .nav-menu a:hover {
-  color: #BA68C8;
+  color: #7b2550;
 }
 
 .admin-icon {
@@ -99,9 +95,9 @@
 
 .welcome-text {
   margin-right: 15px;
-  font-size: 0.9rem;
-  font-weight: 500;
-  color: #E1BEE7;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #2b0b1a;
 }
 
 .auth-buttons {
@@ -130,14 +126,14 @@
 
 .login-btn {
   background-color: transparent;
-  color: white;
-  border: 1px solid white;
+  color: #2b0b1a;
+  border: 1px solid rgba(43,11,24,0.08);
 }
 
 .signup-btn {
-  background-color: #BA68C8;
-  color: white;
-  border: 1px solid #BA68C8;
+  background-color: #7b2550;
+  color: #fff0f6;
+  border: 1px solid #7b2550;
 }
 
 .logout-btn:hover {
@@ -169,7 +165,7 @@
   display: block;
   height: 3px;
   width: 100%;
-  background-color: white;
+  background-color: #2b0b1a;
   border-radius: 3px;
   transition: all 0.3s ease;
 }

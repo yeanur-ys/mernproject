@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from '../axios';
 import { Link } from 'react-router-dom';
+import LoadingPage from './LoadingPage';
 
 const MyBorrows = () => {
   const [borrows, setBorrows] = useState([]);
@@ -52,7 +53,7 @@ const MyBorrows = () => {
     }
   };
 
-  if (loading) return <div className="text-center py-8">Loading your borrowed books...</div>;
+  if (loading) return <LoadingPage message="Loading your borrowed books" />;
 
   return (
     <div className="bg-white rounded-lg shadow-md p-6">

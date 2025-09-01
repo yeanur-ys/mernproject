@@ -8,11 +8,9 @@ import Signup from './pages/Signup';
 import BookCatalog from './pages/BookCatalog';
 import BookDetails from './pages/BookDetails';
 import AdminPanel from './pages/AdminPanel';
-import UserDashboard from './pages/UserDashboard';
 
 // Utility components
-import { decodeToken } from './utils/jwt';
-import LoadingPage from './components/LoadingPage';
+import { jwtDecode } from 'jwt-decode';
 
 // Custom route guard component for protected routes
 const ProtectedRoute = ({ children, redirectPath = '/login', isAllowed }) => {
@@ -37,8 +35,8 @@ function App() {
       }
 
       try {
-  console.log('Decoding token...');
-  const decoded = decodeToken(token);
+        console.log('Decoding token...');
+        const decoded = jwtDecode(token);
         console.log('Token decoded:', decoded);
         
         // Check if token has required fields
@@ -72,46 +70,43 @@ function App() {
   }, []);
 
   // Display loading state while checking authentication
-  if (loading) return <LoadingPage message="Loading application" />;
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-screen bg-gray-100">
+        <div className="animate-pulse text-xl font-semibold">Loading...</div>
+      </div>
+    );
+  }
 
   return (
     <Router>
       <Routes>
-        {/* Only login/signup are available when not authenticated */}
-        <Route path="/login" element={user ? <Navigate to="/" replace /> : <Login setUser={setUser} />} />
-        <Route path="/signup" element={user ? <Navigate to="/" replace /> : <Signup setUser={setUser} />} />
-
-        {user ? (
-          // Authenticated routes
-          <>
-            <Route path="/" element={<Home user={user} setUser={setUser} />} />
-            <Route path="/catalog" element={<BookCatalog user={user} setUser={setUser} />} />
-            <Route path="/books/:id" element={<BookDetails user={user} setUser={setUser} />} />
-
-            <Route
-              path="/admin/*"
-              element={
-                <ProtectedRoute isAllowed={user && user.role === 'admin'} redirectPath="/">
-                  <AdminPanel user={user} />
-                </ProtectedRoute>
-              }
-            />
-
-            <Route
-              path="/dashboard"
-              element={
-                <ProtectedRoute isAllowed={!!user} redirectPath="/login">
-                  <UserDashboard user={user} />
-                </ProtectedRoute>
-              }
-            />
-
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </>
-        ) : (
-          // If not authenticated, redirect any other route to /login
-          <Route path="*" element={<Navigate to="/login" replace />} />
-        )}
+        {/* Public routes */}
+        <Route path="/login" element={user ? <Navigate to="/" replace /> : <Login />} />
+        <Route path="/signup" element={user ? <Navigate to="/" replace /> : <Signup />} />
+        
+        {/* Home page - accessible to all but shows different content based on auth */}
+        <Route path="/" element={<Home user={user} />} />
+        
+        {/* Book catalog - accessible to all */}
+        <Route path="/catalog" element={<BookCatalog user={user} />} />
+        <Route path="/books/:id" element={<BookDetails user={user} />} />
+        
+        {/* Protected routes */}
+        <Route 
+          path="/admin/*" 
+          element={
+            <ProtectedRoute 
+              isAllowed={user && user.role === 'admin'} 
+              redirectPath="/"
+            >
+              <AdminPanel />
+            </ProtectedRoute>
+          }
+        />
+        
+        {/* Default redirect for unknown routes */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>
   );
