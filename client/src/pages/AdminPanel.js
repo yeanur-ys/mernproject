@@ -184,7 +184,7 @@ const AdminPanel = ({ user: propUser }) => {
                         <td className="p-2 align-top">{b.author}</td>
                         <td className="p-2 align-top">{b.genre || '—'}</td>
                         <td className="p-2 align-top">{b.isAvailable ? <span className="text-green-600">Available</span> : <span className="text-red-600">Borrowed</span>}</td>
-                        <td className="p-2 align-top">
+                        <td className="p-2 align-top actions">
                           <button
                             onClick={() => navigate(`/admin/${b._id}`)}
                             className="p-1 px-2 mr-2 bg-blue-500 text-white rounded hover:bg-blue-600"
