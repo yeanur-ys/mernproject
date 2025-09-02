@@ -5,6 +5,9 @@ import Header from '../components/Header';
 import Footer from '../components/Footer';
 import BorrowedBooks from '../components/BorrowedBooks';
 import AddBook from '../components/AddBook';
+import '../styles/AdminPanel.css';
+
+// ...existing code...
 
 const AdminPanel = ({ user: propUser }) => {
   const [formData, setFormData] = useState({
@@ -50,6 +53,22 @@ const AdminPanel = ({ user: propUser }) => {
         .catch(error => console.log(error));
     }
   }, [id, navigate]);
+
+  // Fetch books for management
+  const [books, setBooks] = useState([]);
+  const fetchBooks = async () => {
+    try {
+      const res = await axios.get('/books');
+      setBooks(res.data || []);
+    } catch (err) {
+      console.error('Failed to load books for admin:', err);
+    }
+  };
+
+  useEffect(() => {
+    // fetch always when admin panel mounts or when switching to manageBooks
+    fetchBooks();
+  }, []);
 
   useEffect(() => {
     // When switched to borrowed tab, ensure BorrowedBooks fetches current data by re-mounting
@@ -119,6 +138,82 @@ const AdminPanel = ({ user: propUser }) => {
         {/* Tab Content */}
         {activeTab === 'addBook' && (
           <AddBook onBookAdded={() => setError('')} />
+        )}
+        
+        {/* Manage Books */}
+        <button
+          onClick={() => setActiveTab('manageBooks')}
+          className={`mt-4 mb-6 py-2 px-4 rounded ${activeTab === 'manageBooks' ? 'bg-pink-600 text-white' : 'bg-gray-100'}`}
+        >
+          Manage Books
+        </button>
+
+        {activeTab === 'manageBooks' && (
+          <div className="manage-books bg-white p-6 rounded-lg shadow-md">
+            <h3 className="text-xl font-bold mb-4">Manage Books</h3>
+            <div className="mb-4">
+              <button
+                onClick={() => setActiveTab('addBook')}
+                className="p-2 bg-green-500 text-white rounded-md mr-2"
+              >
+                Add New Book
+              </button>
+              <button onClick={fetchBooks} className="p-2 bg-gray-200 rounded-md">Refresh</button>
+            </div>
+
+            {books.length === 0 ? (
+              <p className="text-gray-500">No books in the library.</p>
+            ) : (
+              <div className="admin-books-table overflow-x-auto">
+                <table className="min-w-full border">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="p-2 text-left">Cover</th>
+                      <th className="p-2 text-left">Title</th>
+                      <th className="p-2 text-left">Author</th>
+                      <th className="p-2 text-left">Genre</th>
+                      <th className="p-2 text-left">Status</th>
+                      <th className="p-2 text-left">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {books.map(b => (
+                      <tr key={b._id} className="border-t">
+                        <td className="p-2"><img src={b.imageUrl || 'https://via.placeholder.com/80x100'} alt={b.title} className="w-16 h-20 object-cover" /></td>
+                        <td className="p-2 align-top">{b.title}</td>
+                        <td className="p-2 align-top">{b.author}</td>
+                        <td className="p-2 align-top">{b.genre || '—'}</td>
+                        <td className="p-2 align-top">{b.isAvailable ? <span className="text-green-600">Available</span> : <span className="text-red-600">Borrowed</span>}</td>
+                        <td className="p-2 align-top">
+                          <button
+                            onClick={() => navigate(`/admin/${b._id}`)}
+                            className="p-1 px-2 mr-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={async () => {
+                              if (!window.confirm('Delete this book permanently?')) return;
+                              try {
+                                await axios.delete(`/books/${b._id}`);
+                                await fetchBooks();
+                              } catch (err) {
+                                console.error('Failed to delete book:', err);
+                                alert('Failed to delete book');
+                              }
+                            }}
+                            className="p-1 px-2 bg-red-500 text-white rounded hover:bg-red-600"
+                          >
+                            Delete
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
         )}
         
         {activeTab === 'editBook' && isEdit && (

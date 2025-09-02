@@ -110,6 +110,51 @@
   margin-bottom: 1rem;
 }
 
+/* Filter widget styles */
+.catalog-filter {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.catalog-filter .filter-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.catalog-filter .filter-label {
+  font-weight: 700;
+  color: #3a0712;
+  margin-bottom: 0.5rem;
+}
+
+.catalog-filter .filter-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+}
+
+.catalog-filter .filter-item {
+  display: inline-flex;
+  align-items: center;
+  background: #fff7fb;
+  border: 1px solid rgba(43,11,24,0.06);
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.catalog-filter input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: #7b2550; /* modern browsers */
+}
+
+.catalog-filter .filter-item span {
+  color: #2b0b1a;
+}
+
 .available-badge {
   background-color: #c8e6c9;
   color: #1b5e20;
