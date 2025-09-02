@@ -94,10 +94,22 @@
 }
 
 .welcome-text {
-  margin-right: 15px;
+  margin-right: 12px;
   font-size: 0.95rem;
   font-weight: 600;
   color: #2b0b1a;
+}
+
+/* admin / user name styling */
+.user-name {
+  font-weight: 700;
+  color: #3a0712;
+  background: rgba(255,255,255,0.12);
+  padding: 6px 10px;
+  border-radius: 18px;
+  border: 1px solid rgba(58,7,18,0.06);
+  margin-right: 10px;
+  font-size: 0.95rem;
 }
 
 .auth-buttons {

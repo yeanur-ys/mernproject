@@ -7,6 +7,7 @@ const AddBook = ({ onBookAdded }) => {
     author: '',
     imageUrl: '',
     genre: '',
+    availableCount: 10,
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -19,13 +20,15 @@ const AddBook = ({ onBookAdded }) => {
     setSuccess('');
     
     try {
-      await axios.post('/books', formData);
+      const payload = { ...formData, availableCount: Number(formData.availableCount || 10) };
+      await axios.post('/books', payload);
       setSuccess('Book added successfully!');
       setFormData({
         title: '',
         author: '',
         imageUrl: '',
         genre: '',
+        availableCount: 10,
       });
       if (onBookAdded) onBookAdded();
     } catch (err) {
@@ -115,7 +118,22 @@ const AddBook = ({ onBookAdded }) => {
             <option value="Other">Other</option>
           </select>
         </div>
-        
+
+        <div className="mb-4">
+          <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="availableCount">
+            Number of Copies Available
+          </label>
+          <input
+            type="number"
+            id="availableCount"
+            min="0"
+            className="w-full p-2 border border-gray-300 rounded-md"
+            value={formData.availableCount}
+            onChange={(e) => setFormData({ ...formData, availableCount: Number(e.target.value) })}
+            required
+          />
+        </div>
+
         <button
           type="submit"
           className="w-full p-2 bg-green-500 text-white rounded-md hover:bg-green-600"

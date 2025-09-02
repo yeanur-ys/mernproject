@@ -89,7 +89,15 @@ function App() {
             <Route path="/books/:id" element={<BookDetails user={user} setUser={setUser} />} />
 
             <Route
-              path="/admin/*"
+              path="/admin"
+              element={
+                <ProtectedRoute isAllowed={user && user.role === 'admin'} redirectPath="/">
+                  <AdminPanel user={user} />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/:id"
               element={
                 <ProtectedRoute isAllowed={user && user.role === 'admin'} redirectPath="/">
                   <AdminPanel user={user} />

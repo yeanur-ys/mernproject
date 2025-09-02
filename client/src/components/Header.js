@@ -75,7 +75,7 @@ const Header = ({ user, setUser }) => {
             <li className="user-menu-item">
               {user ? (
                 <div className="user-info">
-                  <span className="welcome-text">Hi, {user.name || user.email.split('@')[0]}</span>
+                  <span className="welcome-text">Hi, <span className="user-name">{user.name || user.email.split('@')[0]}</span></span>
                   <LogoutButton setUser={setUser} className="logout-btn" />
                 </div>
               ) : (

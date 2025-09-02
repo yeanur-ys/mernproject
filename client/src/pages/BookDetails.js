@@ -4,6 +4,7 @@ import axios from '../axios';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import LoadingPage from '../components/LoadingPage';
+import '../styles/BookDetails.css';
 
 const BookDetails = ({ user, setUser }) => {
   const { id } = useParams();
@@ -13,12 +14,24 @@ const BookDetails = ({ user, setUser }) => {
   const [borrowing, setBorrowing] = useState(false);
   const [borrowSuccess, setBorrowSuccess] = useState('');
   const [borrowError, setBorrowError] = useState('');
+  const [reviews, setReviews] = useState([]);
+  const [newRating, setNewRating] = useState(5);
+  const [newComment, setNewComment] = useState('');
+  const [postingReview, setPostingReview] = useState(false);
+  const [reviewError, setReviewError] = useState('');
 
   useEffect(() => {
     const fetchData = async () => {
       try {
   const response = await axios.get(`/books/${id}`);
         setBook(response.data);
+        // fetch reviews separately
+        try {
+          const r = await axios.get(`/reviews/book/${id}`);
+          setReviews(r.data);
+        } catch (rvErr) {
+          console.warn('Failed to load reviews', rvErr?.response?.data || rvErr.message);
+        }
       } catch (err) {
         setError(err.response?.data?.message || err.message || 'Failed to load book');
       } finally {
@@ -54,19 +67,20 @@ const BookDetails = ({ user, setUser }) => {
                 <h3 className="text-xl font-semibold mb-2">Description</h3>
                 <p className="text-gray-700">{book.description || 'No description available.'}</p>
               </div>
+              {/* reviews moved below the main card for layout */}
 
               {/* Borrow status */}
               <div className="mt-6 p-3 rounded-md bg-gray-50">
                 <h3 className="font-semibold mb-1">Availability Status</h3>
-                {book.isAvailable ? (
-                  <div className="text-green-600">Available for borrowing</div>
+                {((book.availableCount ?? book.countavailable) > 0) ? (
+                  <div className="text-green-600">{(book.availableCount ?? book.countavailable)} copies available</div>
                 ) : (
-                  <div className="text-red-600">Currently borrowed</div>
+                  <div className="text-red-600">Currently not available</div>
                 )}
               </div>
               
               {/* Borrow button (hidden for admins) */}
-              {user && book.isAvailable && user.role !== 'admin' && (
+              {user && (book.availableCount ?? book.countavailable) > 0 && user.role !== 'admin' && (
                 <div className="mt-4">
                   <button
                     onClick={async () => {
@@ -89,7 +103,13 @@ const BookDetails = ({ user, setUser }) => {
                         console.log('Borrow response:', response.data);
                         
                         setBorrowSuccess(`Book borrowed successfully! Due date: ${new Date(response.data.dueDate).toLocaleDateString()}`);
-                        setBook({ ...book, isAvailable: false });
+                        // refresh book details from server to get updated counts
+                        try {
+                          const bRes = await axios.get(`/books/${book._id}`);
+                          setBook(bRes.data);
+                        } catch (e) {
+                          console.warn('Failed to refresh book after borrow', e?.message || e);
+                        }
                       } catch (err) {
                         console.error('Borrow error:', err);
                         setBorrowError(err.response?.data?.message || err.message || 'Failed to borrow book');
@@ -127,6 +147,66 @@ const BookDetails = ({ user, setUser }) => {
                 <div className="mt-4 p-2 bg-yellow-100 text-yellow-800 rounded">
                   Admins cannot borrow books here. Use the Admin Dashboard to manage borrows.
                 </div>
+              )}
+            </div>
+          </div>
+        </div>
+        {/* Reviews card placed below the main book card */}
+        <div className="reviews-wrapper max-w-4xl mx-auto mt-6">
+          <div className="reviews-card bg-white p-4 rounded-lg shadow-sm">
+            <h3 className="reviews-heading">Reviews</h3>
+            {reviews.length === 0 && <div className="text-gray-600">No reviews yet. Be the first to review.</div>}
+            <div className="reviews-list mt-3">
+              {reviews.map(r => (
+                <div key={r._id} className="review-card">
+                  <div className="review-header">
+                    <strong className="review-author">{r.reviewerName || r.user?.name || 'Anonymous'}</strong>
+                    <span className="review-date">{new Date(r.createdAt).toLocaleDateString()}</span>
+                  </div>
+                  <div className="review-rating">Rating: <span className="rating-value">{r.rating}</span>/5</div>
+                  {r.comment && <div className="review-comment">{r.comment}</div>}
+                </div>
+              ))}
+            </div>
+
+            <div className="review-form mt-4">
+              {user ? (
+                <div className="review-post-card">
+                  <h4 className="mb-2">Leave a review</h4>
+                  <div className="flex items-center gap-3 mb-2">
+                    <label className="text-sm">Rating</label>
+                    <select value={newRating} onChange={e => setNewRating(Number(e.target.value))} className="border rounded px-2 py-1">
+                      {[5,4,3,2,1].map(n => <option key={n} value={n}>{n}</option>)}
+                    </select>
+                  </div>
+                  <textarea value={newComment} onChange={e => setNewComment(e.target.value)} className="w-full border rounded p-2 mb-2" placeholder="Write a short review (optional)"></textarea>
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={async () => {
+                        try {
+                          setPostingReview(true);
+                          setReviewError('');
+                          const res = await axios.post(`/reviews/book/${id}`, { rating: newRating, comment: newComment });
+                          setReviews(prev => [res.data, ...prev]);
+                          setNewComment('');
+                          setNewRating(5);
+                        } catch (err) {
+                          console.error('Review post error', err);
+                          setReviewError(err.response?.data?.message || err.message || 'Failed to post review');
+                        } finally {
+                          setPostingReview(false);
+                        }
+                      }}
+                      className="btn-submit"
+                      disabled={postingReview}
+                    >
+                      {postingReview ? 'Posting...' : 'Submit Review'}
+                    </button>
+                    {reviewError && <div className="text-red-600">{reviewError}</div>}
+                  </div>
+                </div>
+              ) : (
+                <div className="text-sm text-gray-600">Please <Link to="/login" className="underline">log in</Link> to leave a review.</div>
               )}
             </div>
           </div>

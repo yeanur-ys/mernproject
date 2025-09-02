@@ -7,6 +7,7 @@ const path = require('path');
 const bookRoutes = require('./routes/bookRoutes');
 const authRoutes = require('./routes/authRoutes');
 const borrowRoutes = require('./routes/borrowRoutes');
+const reviewRoutes = require('./routes/reviewRoutes');
 
 // Initialize express app
 const app = express();
@@ -45,6 +46,7 @@ mongoose
 app.use('/api/books', bookRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/borrows', borrowRoutes);
+app.use('/api/reviews', reviewRoutes);
 
 // Root route
 app.get('/', (req, res) => {

@@ -14,7 +14,8 @@ const AdminPanel = ({ user: propUser }) => {
     title: '',
     author: '',
     imageUrl: '',
-    genre: '',
+  genre: '',
+  availableCount: 10,
   });
   const [isEdit, setIsEdit] = useState(false);
   const [error, setError] = useState('');
@@ -27,35 +28,68 @@ const AdminPanel = ({ user: propUser }) => {
     // Update local user when prop changes
     setUser(propUser || null);
 
-    // Redirect if not admin
-    if (!propUser) {
-      navigate('/login');
-      return;
-    }
-    if (propUser.role !== 'admin') {
-      navigate('/');
-      return;
-    }
-    
-    if (id) {
-      // If there's an ID in the URL, it means we are editing a book
-      setIsEdit(true);
-      setActiveTab('editBook');
-      axios.get(`/books/${id}`)
-        .then(response => {
+    // Ensure we have an authenticated admin user before showing admin UI.
+    // If propUser is not provided, try to fetch /auth/me using token from localStorage.
+    const ensureAdminAndLoad = async () => {
+      let currentUser = propUser;
+
+      if (!currentUser) {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          navigate('/login');
+          return;
+        }
+
+        try {
+          const res = await axios.get('/auth/me');
+          currentUser = res.data?.user || res.data;
+          setUser(currentUser || null);
+        } catch (err) {
+          console.error('Failed to verify current user:', err);
+          navigate('/login');
+          return;
+        }
+      }
+
+      if (!currentUser || currentUser.role !== 'admin') {
+        navigate('/');
+        return;
+      }
+
+      if (id) {
+        // If there's an ID in the URL, it means we are editing a book
+        setIsEdit(true);
+        setActiveTab('editBook');
+        try {
+          const response = await axios.get(`/books/${id}`);
           setFormData({
-            title: response.data.title,
-            author: response.data.author,
-            imageUrl: response.data.imageUrl,
-            genre: response.data.genre,
+            title: response.data.title || '',
+            author: response.data.author || '',
+            imageUrl: response.data.imageUrl || '',
+            genre: response.data.genre || '',
+            availableCount: response.data.availableCount ?? response.data.countavailable ?? 10,
           });
-        })
-        .catch(error => console.log(error));
-    }
-  }, [id, navigate]);
+        } catch (error) {
+          console.error('Failed to load book for editing:', error);
+        }
+      } else {
+        setIsEdit(false);
+        setFormData({ title: '', author: '', imageUrl: '', genre: '', availableCount: 10 });
+      }
+    };
+
+    ensureAdminAndLoad();
+  }, [id, navigate, propUser]);
+
+  // Clear messages when switching tabs
+  useEffect(() => {
+    setError('');
+    setSuccess('');
+  }, [activeTab]);
 
   // Fetch books for management
   const [books, setBooks] = useState([]);
+  const [success, setSuccess] = useState('');
   const fetchBooks = async () => {
     try {
       const res = await axios.get('/books');
@@ -78,14 +112,36 @@ const AdminPanel = ({ user: propUser }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      if (isEdit) {
-        await axios.put(`/books/${id}`, formData);
-        alert('Book updated successfully!');
-      } else {
-        await axios.post('/books', formData);
-        alert('Book added successfully!');
+      // Validate required fields
+      const payload = {
+        title: String(formData.title || '').trim(),
+        author: String(formData.author || '').trim(),
+        imageUrl: String(formData.imageUrl || '').trim(),
+        genre: String(formData.genre || '').trim(),
+        availableCount: Number(formData.availableCount ?? 10),
+      };
+
+      if (!payload.title || !payload.author || !payload.imageUrl || !payload.genre) {
+        setError('Please fill in all required fields');
+        return;
       }
-      navigate('/catalog');
+
+      // keep legacy field in sync
+      payload.countavailable = payload.availableCount;
+
+      if (isEdit && id) {
+        const res = await axios.put(`/books/${id}`, payload);
+        await fetchBooks();
+        setActiveTab('manageBooks');
+        setSuccess('Book updated successfully');
+        navigate('/admin');
+      } else {
+        const res = await axios.post('/books', payload);
+        await fetchBooks();
+        setActiveTab('manageBooks');
+        setSuccess('Book created successfully');
+        navigate('/admin');
+      }
     } catch (err) {
       setError('Error while saving book: ' + (err.response?.data?.message || err.message));
     }
@@ -97,59 +153,49 @@ const AdminPanel = ({ user: propUser }) => {
       <div className="flex-grow p-8 max-w-6xl mx-auto w-full">
         <h2 className="text-3xl font-bold mb-6">Admin Dashboard</h2>
         
-        {/* Tab Navigation */}
-        <div className="mb-6 border-b">
-          <div className="flex flex-wrap -mb-px">
+        {/* Full-width segmented tab navigation */}
+        <div className="admin-tabs mb-6">
+          <button
+            className={`admin-tab ${activeTab === 'addBook' ? 'active' : ''}`}
+            onClick={() => { setActiveTab('addBook'); setIsEdit(false); navigate('/admin'); }}
+          >
+            Add New Book
+          </button>
+
+          <button
+            className={`admin-tab ${activeTab === 'manageBooks' ? 'active' : ''}`}
+            onClick={() => { setActiveTab('manageBooks'); navigate('/admin'); }}
+          >
+            Manage Books
+          </button>
+
+          {isEdit && (
             <button
-              onClick={() => setActiveTab('addBook')}
-              className={`mr-4 py-2 px-4 border-b-2 ${
-                activeTab === 'addBook' 
-                  ? 'border-blue-500 text-blue-500' 
-                  : 'border-transparent hover:border-gray-300'
-              }`}
+              className={`admin-tab ${activeTab === 'editBook' ? 'active' : ''}`}
+              onClick={() => { setActiveTab('editBook'); navigate(`/admin/${id}`); }}
             >
-              Add New Book
+              Edit Book
             </button>
-            {isEdit && (
-              <button
-                onClick={() => setActiveTab('editBook')}
-                className={`mr-4 py-2 px-4 border-b-2 ${
-                  activeTab === 'editBook' 
-                    ? 'border-blue-500 text-blue-500' 
-                    : 'border-transparent hover:border-gray-300'
-                }`}
-              >
-                Edit Book
-              </button>
-            )}
-            <button
-              onClick={() => setActiveTab('borrowed')}
-              className={`mr-4 py-2 px-4 border-b-2 ${
-                activeTab === 'borrowed' 
-                  ? 'border-blue-500 text-blue-500' 
-                  : 'border-transparent hover:border-gray-300'
-              }`}
-            >
-              Borrowed Books
-            </button>
-          </div>
+          )}
+
+          <button
+            className={`admin-tab ${activeTab === 'borrowed' ? 'active' : ''}`}
+            onClick={() => { setActiveTab('borrowed'); navigate('/admin'); }}
+          >
+            Borrowed Books
+          </button>
         </div>
         
         {/* Tab Content */}
-        {activeTab === 'addBook' && (
-          <AddBook onBookAdded={() => setError('')} />
-        )}
+        <div className="admin-tab-content">
+          {activeTab === 'addBook' && (
+            <AddBook onBookAdded={() => setError('')} />
+          )}
         
-        {/* Manage Books */}
-        <button
-          onClick={() => setActiveTab('manageBooks')}
-          className={`mt-4 mb-6 py-2 px-4 rounded ${activeTab === 'manageBooks' ? 'bg-pink-600 text-white' : 'bg-gray-100'}`}
-        >
-          Manage Books
-        </button>
+  {/* (tabs above control the active section) */}
 
-        {activeTab === 'manageBooks' && (
-          <div className="manage-books bg-white p-6 rounded-lg shadow-md">
+          {activeTab === 'manageBooks' && (
+            <div className="manage-books bg-white p-6 rounded-lg shadow-md">
             <h3 className="text-xl font-bold mb-4">Manage Books</h3>
             <div className="mb-4">
               <button
@@ -172,7 +218,7 @@ const AdminPanel = ({ user: propUser }) => {
                       <th className="p-2 text-left">Title</th>
                       <th className="p-2 text-left">Author</th>
                       <th className="p-2 text-left">Genre</th>
-                      <th className="p-2 text-left">Status</th>
+                      <th className="p-2 text-left">Available</th>
                       <th className="p-2 text-left">Actions</th>
                     </tr>
                   </thead>
@@ -183,10 +229,10 @@ const AdminPanel = ({ user: propUser }) => {
                         <td className="p-2 align-top">{b.title}</td>
                         <td className="p-2 align-top">{b.author}</td>
                         <td className="p-2 align-top">{b.genre || '—'}</td>
-                        <td className="p-2 align-top">{b.isAvailable ? <span className="text-green-600">Available</span> : <span className="text-red-600">Borrowed</span>}</td>
+                        <td className="p-2 align-top">{b.availableCount ?? 0}</td>
                         <td className="p-2 align-top actions">
                           <button
-                            onClick={() => navigate(`/admin/${b._id}`)}
+                            onClick={() => { setActiveTab('editBook'); setError(''); setSuccess(''); navigate(`/admin/${b._id}`); }}
                             className="p-1 px-2 mr-2 bg-blue-500 text-white rounded hover:bg-blue-600"
                           >
                             Edit
@@ -213,14 +259,14 @@ const AdminPanel = ({ user: propUser }) => {
                 </table>
               </div>
             )}
-          </div>
-        )}
+            </div>
+          )}
         
-        {activeTab === 'editBook' && isEdit && (
-          <div className="bg-white p-6 rounded-lg shadow-md">
+          {activeTab === 'editBook' && isEdit && (
+            <div className="bg-white p-6 rounded-lg shadow-md edit-book-panel">
             <h3 className="text-xl font-bold mb-4">Edit Book</h3>
-            <form onSubmit={handleSubmit}>
-              <div className="mb-4">
+              <form onSubmit={handleSubmit} className="edit-book-form">
+              <div className="mb-4 form-column">
                 <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="title">
                   Title
                 </label>
@@ -235,7 +281,7 @@ const AdminPanel = ({ user: propUser }) => {
                 />
               </div>
               
-              <div className="mb-4">
+              <div className="mb-4 form-column">
                 <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="author">
                   Author
                 </label>
@@ -250,7 +296,7 @@ const AdminPanel = ({ user: propUser }) => {
                 />
               </div>
               
-              <div className="mb-4">
+              <div className="mb-4 form-column">
                 <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="imageUrl">
                   Book Cover Image URL
                 </label>
@@ -265,7 +311,7 @@ const AdminPanel = ({ user: propUser }) => {
                 />
               </div>
               
-              <div className="mb-4">
+              <div className="mb-4 form-column">
                 <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="genre">
                   Genre
                 </label>
@@ -293,7 +339,21 @@ const AdminPanel = ({ user: propUser }) => {
                 </select>
               </div>
               
-              <div className="flex gap-4">
+              <div className="mb-4">
+                <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="availableCount">
+                  Number of Copies Available
+                </label>
+                <input
+                  type="number"
+                  id="availableCount"
+                  min="0"
+                  className="w-full p-2 border border-gray-300 rounded-md"
+                  value={formData.availableCount || 10}
+                  onChange={(e) => setFormData({ ...formData, availableCount: Number(e.target.value) })}
+                />
+              </div>
+              
+              <div className="form-actions flex gap-4">
                 <button 
                   type="submit" 
                   className="flex-1 p-2 bg-green-500 text-white rounded-md hover:bg-green-600"
@@ -317,6 +377,7 @@ const AdminPanel = ({ user: propUser }) => {
           <BorrowedBooks />
         )}
       </div>
+    </div>
       <Footer />
     </div>
   );

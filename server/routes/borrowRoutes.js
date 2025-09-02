@@ -152,11 +152,13 @@ router.post('/borrow', authenticateJWT, async (req, res) => {
       return res.status(404).json({ message: 'Book not found' });
     }
     
-    // Check if the book is available
-    if (!book.isAvailable) {
+    // Check if the book has available copies
+  // normalize using either field
+  const available = (book.availableCount ?? book.countavailable ?? 0);
+  if (available <= 0) {
       await session.abortTransaction();
       session.endSession();
-      return res.status(400).json({ message: 'This book is currently not available' });
+      return res.status(400).json({ message: 'No copies of this book are currently available' });
     }
     
     // Check if user already has this book
@@ -179,9 +181,14 @@ router.post('/borrow', authenticateJWT, async (req, res) => {
       dueDate,
     });
     
-    // Mark the book as unavailable
-    book.isAvailable = false;
-    book.currentBorrowerId = req.user.userId;
+    // Decrement available count and update availability state
+    // decrement both fields
+    book.availableCount = Math.max(0, (book.availableCount || book.countavailable || 0) - 1);
+    book.countavailable = book.availableCount;
+    book.isAvailable = book.availableCount > 0;
+    if (!book.isAvailable) {
+      book.currentBorrowerId = req.user.userId;
+    }
     book.borrowHistory.push(borrow._id);
 
     console.log('Saving borrow record...');
@@ -250,9 +257,13 @@ router.post('/return', authenticateJWT, async (req, res) => {
     // Update book availability
     const book = await Book.findById(borrow.bookId).session(session);
     if (book) {
-      book.isAvailable = true;
-      book.currentBorrowerId = null;
-      await book.save({ session });
+  // Increase available count and mark available, keep both fields in sync
+  const newCount = (book.availableCount || book.countavailable || 0) + 1;
+  book.availableCount = newCount;
+  book.countavailable = newCount;
+  book.isAvailable = true;
+  book.currentBorrowerId = null;
+  await book.save({ session });
     }
 
     // Remove from user's borrowedBooks array

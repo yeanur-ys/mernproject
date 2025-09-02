@@ -8,14 +8,39 @@ import axios from '../axios';
 import '../styles/HomePage.css';
 
 const Home = ({ user, setUser }) => {
-  const [featuredBooks, setFeaturedBooks] = useState([]);
+  // default placeholders so the grid stays consistent if the API is slow or fails
+  const defaultPlaceholders = Array.from({ length: 5 }).map((_, i) => ({
+    _id: `ph-${i}`,
+    title: 'Coming Soon',
+    author: '',
+    imageUrl: 'https://via.placeholder.com/300x300?text=Coming+Soon',
+    description: 'More great books arriving soon.',
+    isPlaceholder: true,
+    isAvailable: false,
+  }));
+
+  const [featuredBooks, setFeaturedBooks] = useState(defaultPlaceholders);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchFeaturedBooks = async () => {
       try {
-        const response = await axios.get('/books?limit=4');
-        setFeaturedBooks(response.data.slice(0, 4));
+  const response = await axios.get('/books');
+  // ensure we always show 5 cards in the popular section; fill with placeholders if needed
+  const take = response.data.slice(0, 5);
+  const placeholders = [];
+  for (let i = take.length; i < 5; i++) {
+    placeholders.push({
+      _id: `placeholder-${i}`,
+      title: 'Coming Soon',
+      author: '',
+      imageUrl: 'https://via.placeholder.com/300x300?text=Coming+Soon',
+      description: 'More great books arriving soon.',
+      isPlaceholder: true,
+      isAvailable: false,
+    });
+  }
+  setFeaturedBooks([...take, ...placeholders]);
       } catch (error) {
         console.error('Error fetching books', error);
       } finally {
@@ -80,17 +105,31 @@ const Home = ({ user, setUser }) => {
             {featuredBooks.length > 0 ? (
               featuredBooks.map((book) => (
                 <div className="book-card" key={book._id}>
-                  <img 
-                    src={book.imageUrl || 'https://via.placeholder.com/300x400?text=Book+Cover'} 
-                    alt={book.title}
-                    className="book-image"
-                  />
+                  <div className="book-image-wrap">
+                    <img
+                      src={book.imageUrl || 'https://via.placeholder.com/300x400?text=Book+Cover'}
+                      alt={book.title}
+                      className="book-image"
+                    />
+                    {typeof book.avgRating === 'number' && (
+                      <div className="rating-badge" title={`Average rating ${book.avgRating}`}>
+                        <span className="badge-stars">{Array.from({ length: 5 }).map((_, i) => (
+                          <span key={i} className={i < Math.round(book.avgRating) ? 'star on' : 'star'}>★</span>
+                        ))}</span>
+                        <span className="badge-num">{book.avgRating.toFixed(1)}</span>
+                      </div>
+                    )}
+                  </div>
                   <div className="book-info">
-                    <h3 className="book-title">{book.title}</h3>
-                    <p className="book-author">by {book.author}</p>
-                    <Link to={`/books/${book._id}`} className="book-button">
-                      View Details
-                    </Link>
+                    <div>
+                      <h3 className="book-title">{book.title}</h3>
+                      <p className="book-author">by {book.author}</p>
+                      {book.description && <p className="book-desc">{book.description.slice(0, 120)}{book.description.length > 120 ? '…' : ''}</p>}
+                    </div>
+                    <div className="book-actions">
+                      <Link to={`/books/${book._id}`} className="book-button">View Details</Link>
+                      {book.isAvailable ? <span className="availability-badge available">Available</span> : <span className="availability-badge borrowed">Borrowed</span>}
+                    </div>
                   </div>
                 </div>
               ))
